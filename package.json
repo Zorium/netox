@@ -26,6 +26,7 @@
     "rx-lite": "^2.5.2"
   },
   "devDependencies": {
+    "b-assert": "^0.1.2",
     "clay-coffeescript-style-guide": "^1.1.0",
     "coffee-loader": "^0.7.2",
     "gulp": "^3.9.0",
@@ -44,7 +45,7 @@
     "promiz": "^1.0.4",
     "webpack-stream": "^2.0.0",
     "whatwg-fetch": "^0.9.0",
-    "zock": "^0.2.0"
+    "zock": "^0.2.1"
   },
   "directories": {
     "test": "test"

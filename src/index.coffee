@@ -14,9 +14,6 @@ else
 # PROXY_CACHE_KEY = 'STREAM_PROXY_CACHE'
 # CACHE_EXPIRE_TIME_MS = 1000 * 10 # 10 seconds
 
-getCacheKey = (url, opts) ->
-  JSON.stringify(opts) + '__z__' + url
-
 deferredRequestStream = (url, opts) ->
   cachedPromise = null
   Rx.Observable.defer ->
@@ -25,7 +22,8 @@ deferredRequestStream = (url, opts) ->
     return cachedPromise
 
 module.exports = class Proxy
-  constructor: ->
+  constructor: ({@headers} = {}) ->
+    @headers ?= {}
     @cache = {}
 
     # FIXME
@@ -51,8 +49,19 @@ module.exports = class Proxy
       cache[key] = {stream, requestStreams, url, proxyOpts}
     , {}
 
+  _mergeHeaders: (opts) =>
+    # Only forward a subset of headers
+    _.merge
+      headers: _.pick @headers, [
+        'cookie'
+        'user-agent'
+        'accept-language'
+        'x-forwarded-for'
+      ]
+    , opts
+
   fetch: (url, opts = {}) =>
-    proxyOpts = opts # FIXME
+    proxyOpts = @_mergeHeaders opts
     request url, proxyOpts
     .then (res) =>
       unless opts.isCacheable
@@ -60,13 +69,13 @@ module.exports = class Proxy
       return res
 
   stream: (url, opts = {}) =>
-    cacheKey = getCacheKey url, opts
+    cacheKey = JSON.stringify(opts) + '__z__' + url
     cached = @cache[cacheKey]
 
     if cached?
       return cached.stream
 
-    proxyOpts = opts # FIXME
+    proxyOpts = @_mergeHeaders opts
 
     requestStreams = new Rx.ReplaySubject(1)
     requestStreams.onNext deferredRequestStream url, proxyOpts
@@ -74,16 +83,3 @@ module.exports = class Proxy
 
     @cache[cacheKey] = {stream, requestStreams, url, proxyOpts}
     return @cache[cacheKey].stream
-
-
-    # FIXME
-    # proxyOpts = if serverHeaders
-    #   _.merge {
-    #     headers:
-    #       'cookie': serverHeaders['cookie']
-    #       'user-agent': serverHeaders['user-agent']
-    #       'accept-language': serverHeaders['accept-language']
-    #       'x-forwarded-for': serverHeaders['x-forwarded-for']
-    #   }, opts
-    # else
-    #   opts

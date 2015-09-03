@@ -1,7 +1,8 @@
 if window?
   require './polyfill'
 
-assert = require 'assert'
+_ = require 'lodash'
+b = require 'b-assert'
 zock = require 'zock'
 
 Proxy = require '../src'
@@ -17,7 +18,7 @@ describe 'Proxy', ->
       proxy.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
+        b res?.y, 'z'
 
   it 'Simple POST request', ->
     zock
@@ -29,7 +30,7 @@ describe 'Proxy', ->
       proxy.stream 'http://x.com/x', {method: 'POST'}
       .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
+        b res?.y, 'z'
 
   it 'Caches requests', ->
     requestCount = 0
@@ -49,22 +50,22 @@ describe 'Proxy', ->
       proxy.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
+        b res?.y, 'z'
         proxy.stream 'http://x.com/x'
         .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 1
+        b res?.y, 'z'
+        b requestCount, 1
         proxy.stream 'http://x.com/x', {method: 'POST'}
         .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 2
+        b res?.y, 'z'
+        b requestCount, 2
         proxy.stream 'http://x.com/x', {method: 'POST'}
         .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 2
+        b res?.y, 'z'
+        b requestCount, 2
 
   it 'is lazy', ->
     requestCount = 0
@@ -78,12 +79,12 @@ describe 'Proxy', ->
     .withOverrides ->
       proxy = new Proxy()
       stream = proxy.stream 'http://x.com/x'
-      assert.equal requestCount, 0
+      b requestCount, 0
 
       stream.take(1).toPromise()
       .then (res) ->
-        assert.equal requestCount, 1
-        assert.equal res?.y, 'z'
+        b requestCount, 1
+        b res?.y, 'z'
 
   it 'doesn\'t cache fetch requests', ->
     requestCount = 0
@@ -97,11 +98,11 @@ describe 'Proxy', ->
       proxy = new Proxy()
       proxy.fetch 'http://x.com/x'
       .then (res) ->
-        assert.equal res?.y, 'z'
+        b res?.y, 'z'
         proxy.fetch 'http://x.com/x'
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 2
+        b res?.y, 'z'
+        b requestCount, 2
 
   it 'invalidates cache after fetch request', ->
     requestCount = 0
@@ -116,17 +117,17 @@ describe 'Proxy', ->
       proxy.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 1
+        b res?.y, 'z'
+        b requestCount, 1
         proxy.fetch 'http://x.com/x'
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 2
+        b res?.y, 'z'
+        b requestCount, 2
         proxy.stream 'http://x.com/x'
         .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 3
+        b res?.y, 'z'
+        b requestCount, 3
 
   it 'pushes new data to streams on cache invalidation', ->
     requestCount = 0
@@ -144,7 +145,7 @@ describe 'Proxy', ->
       count = 0
       stream.subscribe (res) ->
         count += 1
-        assert.equal count, res.count
+        b count, res.count
 
       # rx streams consume late
       skipTicks = ->
@@ -165,8 +166,8 @@ describe 'Proxy', ->
       .then ->
         stream.take(1).toPromise()
       .then (res) ->
-        assert.equal res.count, 4
-        assert.equal count, 4
+        b res.count, 4
+        b count, 4
 
   it 'doesn\'t invalidate cache when fetch has isCacheable flag', ->
     requestCount = 0
@@ -181,14 +182,57 @@ describe 'Proxy', ->
       proxy.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 1
+        b res?.y, 'z'
+        b requestCount, 1
         proxy.fetch 'http://x.com/x', {isCacheable: true}
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 2
+        b res?.y, 'z'
+        b requestCount, 2
         proxy.stream 'http://x.com/x'
         .take(1).toPromise()
       .then (res) ->
-        assert.equal res?.y, 'z'
-        assert.equal requestCount, 2
+        b res?.y, 'z'
+        b requestCount, 2
+
+  it 'passes serverHeaders with requests, while still caching', ->
+    requestCount = 0
+
+    zock
+      .base 'http://x.com'
+      .get '/x'
+      .reply (req) ->
+        requestCount += 1
+        {y: 'z', headers: req.headers}
+    .withOverrides ->
+      proxy = new Proxy({
+        headers:
+          'cookie': '1'
+          'user-agent': '2'
+          'accept-language': '3'
+          'x-forwarded-for': '4'
+          'not-used': '5'
+      })
+      proxy.stream 'http://x.com/x', {headers: {'user-x': 'y'}}
+      .take(1).toPromise()
+      .then (res) ->
+        b res?.y, 'z'
+        b res.headers['user-x'], 'y'
+        b _.includes _.keys(res.headers), 'cookie'
+        b res.headers['user-agent'], '2'
+        b res.headers['accept-language'], '3'
+        b res.headers['x-forwarded-for'], '4'
+        b res.headers['not-used'], undefined
+        b requestCount, 1
+        proxy.stream 'http://x.com/x', {headers: {'user-x': 'y'}}
+        .take(1).toPromise()
+      .then (res) ->
+        b res?.y, 'z'
+        b res.headers['user-x'], 'y'
+        b res.headers['x-forwarded-for'], '4'
+        b requestCount, 1
+        proxy.fetch 'http://x.com/x', {headers: {'user-x': 'y'}}
+      .then (res) ->
+        b res?.y, 'z'
+        b res.headers['user-x'], 'y'
+        b res.headers['x-forwarded-for'], '4'
+        b requestCount, 2
