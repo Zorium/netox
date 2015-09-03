@@ -236,3 +236,35 @@ describe 'Proxy', ->
         b res.headers['user-x'], 'y'
         b res.headers['x-forwarded-for'], '4'
         b requestCount, 2
+
+  it 'serializes cache', ->
+    zock
+      .base 'http://x.com'
+      .get '/x'
+      .reply {y: 'z'}
+    .withOverrides ->
+      proxy = new Proxy()
+      proxy.stream 'http://x.com/x', {x: '1'}
+      .take(1).toPromise()
+      .then (res) ->
+        b res?.y, 'z'
+        b proxy.serialize(), '''
+          window[\'STREAM_PROXY\'] = \
+            {"cache":{"{\\"x\\":\\"1\\"}__z__http://x.com/x":{"y":"z"}}};
+        '''
+
+  it 'invalidates serialization cache when invalidating cache', ->
+    zock
+      .base 'http://x.com'
+      .get '/x'
+      .reply {y: 'z'}
+    .withOverrides ->
+      proxy = new Proxy()
+      proxy.stream 'http://x.com/x', {x: '1'}
+      .take(1).toPromise()
+      .then ->
+        proxy.fetch 'http://x.com/x'
+      .then ->
+        b proxy.serialize(), '''
+          window[\'STREAM_PROXY\'] = {"cache":{}};
+        '''

@@ -10,24 +10,37 @@ else
   bluebird = 'bluebird'
   require bluebird
 
-# FIXME
-# PROXY_CACHE_KEY = 'STREAM_PROXY_CACHE'
+PROXY_SERIALIZATION_KEY = 'STREAM_PROXY'
 # CACHE_EXPIRE_TIME_MS = 1000 * 10 # 10 seconds
 
-deferredRequestStream = (url, opts) ->
+deferredRequestStream = (url, opts, onresult) ->
   cachedPromise = null
   Rx.Observable.defer ->
     unless cachedPromise
       cachedPromise = request url, opts
+      .then (res) ->
+        onresult res
+        return res
     return cachedPromise
 
 module.exports = class Proxy
   constructor: ({@headers} = {}) ->
     @headers ?= {}
-    @cache = {}
+    @serializationCache = {}
+
+    pageCache = window?[PROXY_SERIALIZATION_KEY]?.cache or {}
+    @cache = _.mapValues pageCache, (res, key) ->
+      [optsString, url] = key.split '__z__'
+      opts = JSON.parse optsString
+
+      requestStreams = new Rx.ReplaySubject(1)
+      requestStreams.onNext Rx.Observable.just res
+      stream = requestStreams.switch()
+
+      {stream, requestStreams, url, proxyOpts: opts}
 
     # FIXME
-    # existingCache = window?[PROXY_CACHE_KEY]
+    # existingCache = window?[PROXY_SERIALIZATION_KEY]
     # isCacheValid = existingCache? and \
     #   Date.now() < existingCache._expireTime and \
     #   # Because client clock may be incorrect and set way in the past
@@ -40,11 +53,13 @@ module.exports = class Proxy
     #   })
 
   _invalidateCache: =>
-    @cache = _.transform @cache, (cache, val, key) ->
+    @serializationCache = {}
+    @cache = _.transform @cache, (cache, val, key) =>
       {stream, requestStreams, url, proxyOpts} = val
 
       cachedSubject = null
-      requestStreams.onNext deferredRequestStream url, proxyOpts
+      requestStreams.onNext deferredRequestStream url, proxyOpts, (res) =>
+        @serializationCache[key] = res
 
       cache[key] = {stream, requestStreams, url, proxyOpts}
     , {}
@@ -59,6 +74,13 @@ module.exports = class Proxy
         'x-forwarded-for'
       ]
     , opts
+
+  serialize: =>
+    serialization = {
+      cache: @serializationCache
+    }
+
+    "window['#{PROXY_SERIALIZATION_KEY}'] = #{JSON.stringify(serialization)};"
 
   fetch: (url, opts = {}) =>
     proxyOpts = @_mergeHeaders opts
@@ -78,7 +100,8 @@ module.exports = class Proxy
     proxyOpts = @_mergeHeaders opts
 
     requestStreams = new Rx.ReplaySubject(1)
-    requestStreams.onNext deferredRequestStream url, proxyOpts
+    requestStreams.onNext deferredRequestStream url, proxyOpts, (res) =>
+      @serializationCache[cacheKey] = res
     stream = requestStreams.switch()
 
     @cache[cacheKey] = {stream, requestStreams, url, proxyOpts}
