@@ -248,10 +248,7 @@ describe 'Proxy', ->
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
-        b proxy.serialize(), '''
-          window[\'STREAM_PROXY\'] = \
-            {"cache":{"{\\"x\\":\\"1\\"}__z__http://x.com/x":{"y":"z"}}};
-        '''
+        b _.includes proxy.serialize(), 'window[\'STREAM_PROXY\'] ='
 
   it 'invalidates serialization cache when invalidating cache', ->
     zock
@@ -265,6 +262,4 @@ describe 'Proxy', ->
       .then ->
         proxy.fetch 'http://x.com/x'
       .then ->
-        b proxy.serialize(), '''
-          window[\'STREAM_PROXY\'] = {"cache":{}};
-        '''
+        b _.includes proxy.serialize(), '"cache":{}'

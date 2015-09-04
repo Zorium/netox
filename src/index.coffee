@@ -11,7 +11,7 @@ else
   require bluebird
 
 PROXY_SERIALIZATION_KEY = 'STREAM_PROXY'
-# CACHE_EXPIRE_TIME_MS = 1000 * 10 # 10 seconds
+SERIALIZATION_EXPIRE_TIME_MS = 1000 * 10 # 10 seconds
 
 deferredRequestStream = (url, opts, onresult) ->
   cachedPromise = null
@@ -28,29 +28,23 @@ module.exports = class Proxy
     @headers ?= {}
     @serializationCache = {}
 
-    pageCache = window?[PROXY_SERIALIZATION_KEY]?.cache or {}
-    @cache = _.mapValues pageCache, (res, key) ->
-      [optsString, url] = key.split '__z__'
-      opts = JSON.parse optsString
+    loadedSerialization = window?[PROXY_SERIALIZATION_KEY]
+    expires = loadedSerialization?.expires
+    if expires? and \
+    # Because of potential clock skew we check around the value
+    Math.abs(Date.now() - expires) < SERIALIZATION_EXPIRE_TIME_MS
+      pageCache = loadedSerialization?.cache or {}
+      @cache = _.mapValues pageCache, (res, key) ->
+        [optsString, url] = key.split '__z__'
+        opts = JSON.parse optsString
 
-      requestStreams = new Rx.ReplaySubject(1)
-      requestStreams.onNext Rx.Observable.just res
-      stream = requestStreams.switch()
+        requestStreams = new Rx.ReplaySubject(1)
+        requestStreams.onNext Rx.Observable.just res
+        stream = requestStreams.switch()
 
-      {stream, requestStreams, url, proxyOpts: opts}
-
-    # FIXME
-    # existingCache = window?[PROXY_SERIALIZATION_KEY]
-    # isCacheValid = existingCache? and \
-    #   Date.now() < existingCache._expireTime and \
-    #   # Because client clock may be incorrect and set way in the past
-    #   Date.now() > existingCache._expireTime - CACHE_EXPIRE_TIME_MS
-    # proxyCache = if isCacheValid
-    #   new Rx.BehaviorSubject(existingCache)
-    # else
-    #   new Rx.BehaviorSubject({
-    #     _expireTime: Date.now() + CACHE_EXPIRE_TIME_MS
-    #   })
+        {stream, requestStreams, url, proxyOpts: opts}
+    else
+      @cache = {}
 
   _invalidateCache: =>
     @serializationCache = {}
@@ -78,6 +72,7 @@ module.exports = class Proxy
   serialize: =>
     serialization = {
       cache: @serializationCache
+      expires: Date.now() + SERIALIZATION_EXPIRE_TIME_MS
     }
 
     "window['#{PROXY_SERIALIZATION_KEY}'] = #{JSON.stringify(serialization)};"
