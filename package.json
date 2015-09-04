@@ -1,12 +1,12 @@
 {
-  "name": "isomorphic-seed",
+  "name": "stream-proxy",
   "version": "0.0.0",
-  "description": "Scaffolding for isomorphic coffeescript libraries",
+  "description": "AJAX request streaming and caching",
   "keywords": [
     "isomorphic",
-    "scaffolding",
-    "library",
-    "bootstrap",
+    "stream",
+    "proxy",
+    "request",
     "coffee",
     "coffeescript"
   ],
@@ -52,10 +52,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Zorium/isomorphic-seed.git"
+    "url": "https://github.com/Zorium/stream-proxy.git"
   },
   "bugs": {
-    "url": "https://github.com/Zorium/isomorphic-seed/issues"
+    "url": "https://github.com/Zorium/stream-proxy/issues"
   },
-  "homepage": "https://github.com/Zorium/isomorphic-seed"
+  "homepage": "https://github.com/Zorium/stream-proxy"
 }
