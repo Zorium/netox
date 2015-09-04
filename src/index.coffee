@@ -26,7 +26,7 @@ deferredRequestStream = (url, opts, onresult) ->
 module.exports = class Proxy
   constructor: ({@headers} = {}) ->
     @headers ?= {}
-    @serializationCache = {}
+    @serializationCache = new Rx.BehaviorSubject {}
 
     loadedSerialization = window?[PROXY_SERIALIZATION_KEY]
     expires = loadedSerialization?.expires
@@ -47,13 +47,15 @@ module.exports = class Proxy
       @cache = {}
 
   _invalidateCache: =>
-    @serializationCache = {}
+    @serializationCache.onNext {}
     @cache = _.transform @cache, (cache, val, key) =>
       {stream, requestStreams, url, proxyOpts} = val
 
       cachedSubject = null
       requestStreams.onNext deferredRequestStream url, proxyOpts, (res) =>
-        @serializationCache[key] = res
+        nextCache = _.clone @serializationCache.getValue()
+        nextCache[key] = res
+        @serializationCache.onNext nextCache
 
       cache[key] = {stream, requestStreams, url, proxyOpts}
     , {}
@@ -69,13 +71,15 @@ module.exports = class Proxy
       ]
     , opts
 
-  serialize: =>
-    serialization = {
-      cache: @serializationCache
-      expires: Date.now() + SERIALIZATION_EXPIRE_TIME_MS
-    }
+  getSerializationStream: =>
+    @serializationCache
+    .map (cache) ->
+      serialization = {
+        cache: cache
+        expires: Date.now() + SERIALIZATION_EXPIRE_TIME_MS
+      }
 
-    "window['#{PROXY_SERIALIZATION_KEY}'] = #{JSON.stringify(serialization)};"
+      "window['#{PROXY_SERIALIZATION_KEY}'] = #{JSON.stringify(serialization)};"
 
   fetch: (url, opts = {}) =>
     proxyOpts = @_mergeHeaders opts
@@ -96,7 +100,9 @@ module.exports = class Proxy
 
     requestStreams = new Rx.ReplaySubject(1)
     requestStreams.onNext deferredRequestStream url, proxyOpts, (res) =>
-      @serializationCache[cacheKey] = res
+      nextCache = _.clone @serializationCache.getValue()
+      nextCache[cacheKey] = res
+      @serializationCache.onNext nextCache
     stream = requestStreams.switch()
 
     @cache[cacheKey] = {stream, requestStreams, url, proxyOpts}

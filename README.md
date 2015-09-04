@@ -17,5 +17,7 @@ proxy.fetch 'http://x.com/x', {isIdempotent: true} # dont re-fetch streams
 .then (res) -> ...
 
 # put this in a server-side generated script tag
-proxy.serialize() # window['STREAM_PROXY'] = {...};
+proxy.getSerializationStream()
+.map (serialization) ->
+  # window['STREAM_PROXY'] = {...};
 ```
