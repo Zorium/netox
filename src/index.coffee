@@ -81,7 +81,7 @@ module.exports = class Proxy
     proxyOpts = @_mergeHeaders opts
     request url, proxyOpts
     .then (res) =>
-      unless opts.isCacheable
+      unless opts.isIdempotent
         @_invalidateCache()
       return res
 

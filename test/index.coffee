@@ -169,7 +169,7 @@ describe 'Proxy', ->
         b res.count, 4
         b count, 4
 
-  it 'doesn\'t invalidate cache when fetch has isCacheable flag', ->
+  it 'doesn\'t invalidate cache when fetch has isIdempotent flag', ->
     requestCount = 0
     zock
       .base 'http://x.com'
@@ -184,7 +184,7 @@ describe 'Proxy', ->
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 1
-        proxy.fetch 'http://x.com/x', {isCacheable: true}
+        proxy.fetch 'http://x.com/x', {isIdempotent: true}
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 2
