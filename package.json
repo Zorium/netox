@@ -1,7 +1,7 @@
 {
-  "name": "stream-proxy",
+  "name": "netox",
   "version": "0.0.0",
-  "description": "AJAX request streaming and caching",
+  "description": "request streaming and caching",
   "keywords": [
     "isomorphic",
     "stream",
@@ -52,10 +52,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Zorium/stream-proxy.git"
+    "url": "https://github.com/Zorium/netox.git"
   },
   "bugs": {
-    "url": "https://github.com/Zorium/stream-proxy/issues"
+    "url": "https://github.com/Zorium/netox/issues"
   },
-  "homepage": "https://github.com/Zorium/stream-proxy"
+  "homepage": "https://github.com/Zorium/netox"
 }

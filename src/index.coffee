@@ -10,7 +10,7 @@ else
   bluebird = 'bluebird'
   require bluebird
 
-PROXY_SERIALIZATION_KEY = 'STREAM_PROXY'
+SERIALIZATION_KEY = 'NETOX'
 SERIALIZATION_EXPIRE_TIME_MS = 1000 * 10 # 10 seconds
 
 deferredRequestStream = (url, opts, onresult) ->
@@ -23,12 +23,12 @@ deferredRequestStream = (url, opts, onresult) ->
         return res
     return cachedPromise
 
-module.exports = class Proxy
+module.exports = class Netox
   constructor: ({@headers} = {}) ->
     @headers ?= {}
     @serializationCache = new Rx.BehaviorSubject {}
 
-    loadedSerialization = window?[PROXY_SERIALIZATION_KEY]
+    loadedSerialization = window?[SERIALIZATION_KEY]
     expires = loadedSerialization?.expires
     if expires? and \
     # Because of potential clock skew we check around the value
@@ -79,7 +79,7 @@ module.exports = class Proxy
         expires: Date.now() + SERIALIZATION_EXPIRE_TIME_MS
       }
 
-      "window['#{PROXY_SERIALIZATION_KEY}'] = #{JSON.stringify(serialization)};"
+      "window['#{SERIALIZATION_KEY}'] = #{JSON.stringify(serialization)};"
 
   fetch: (url, opts = {}) =>
     proxyOpts = @_mergeHeaders opts

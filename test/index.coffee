@@ -5,17 +5,17 @@ _ = require 'lodash'
 b = require 'b-assert'
 zock = require 'zock'
 
-Proxy = require '../src'
+Netox = require '../src'
 
-describe 'Proxy', ->
+describe 'Netox', ->
   it 'Simple GET request', ->
     zock
       .base 'http://x.com'
       .get '/x'
       .reply {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.stream 'http://x.com/x'
+      netox = new Netox()
+      netox.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
@@ -26,8 +26,8 @@ describe 'Proxy', ->
       .post '/x'
       .reply {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.stream 'http://x.com/x', {method: 'POST'}
+      netox = new Netox()
+      netox.stream 'http://x.com/x', {method: 'POST'}
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
@@ -46,22 +46,22 @@ describe 'Proxy', ->
         requestCount += 1
         {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.stream 'http://x.com/x'
+      netox = new Netox()
+      netox.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
-        proxy.stream 'http://x.com/x'
+        netox.stream 'http://x.com/x'
         .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 1
-        proxy.stream 'http://x.com/x', {method: 'POST'}
+        netox.stream 'http://x.com/x', {method: 'POST'}
         .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 2
-        proxy.stream 'http://x.com/x', {method: 'POST'}
+        netox.stream 'http://x.com/x', {method: 'POST'}
         .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
@@ -77,8 +77,8 @@ describe 'Proxy', ->
         requestCount += 1
         {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      stream = proxy.stream 'http://x.com/x'
+      netox = new Netox()
+      stream = netox.stream 'http://x.com/x'
       b requestCount, 0
 
       stream.take(1).toPromise()
@@ -95,11 +95,11 @@ describe 'Proxy', ->
         requestCount += 1
         {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.fetch 'http://x.com/x'
+      netox = new Netox()
+      netox.fetch 'http://x.com/x'
       .then (res) ->
         b res?.y, 'z'
-        proxy.fetch 'http://x.com/x'
+        netox.fetch 'http://x.com/x'
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 2
@@ -113,17 +113,17 @@ describe 'Proxy', ->
         requestCount += 1
         {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.stream 'http://x.com/x'
+      netox = new Netox()
+      netox.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 1
-        proxy.fetch 'http://x.com/x'
+        netox.fetch 'http://x.com/x'
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 2
-        proxy.stream 'http://x.com/x'
+        netox.stream 'http://x.com/x'
         .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
@@ -140,8 +140,8 @@ describe 'Proxy', ->
       .post '/invalidate'
       .reply 204
     .withOverrides ->
-      proxy = new Proxy()
-      stream = proxy.stream 'http://x.com/x'
+      netox = new Netox()
+      stream = netox.stream 'http://x.com/x'
       count = 0
       stream.subscribe (res) ->
         count += 1
@@ -154,14 +154,14 @@ describe 'Proxy', ->
 
       stream.take(1).toPromise()
       .then ->
-        proxy.fetch 'http://x.com/invalidate', {method: 'POST'}
+        netox.fetch 'http://x.com/invalidate', {method: 'POST'}
       .then skipTicks
 
       .then ->
-        proxy.fetch 'http://x.com/invalidate', {method: 'POST'}
+        netox.fetch 'http://x.com/invalidate', {method: 'POST'}
       .then skipTicks
       .then ->
-        proxy.fetch 'http://x.com/invalidate', {method: 'POST'}
+        netox.fetch 'http://x.com/invalidate', {method: 'POST'}
       .then skipTicks
       .then ->
         stream.take(1).toPromise()
@@ -178,17 +178,17 @@ describe 'Proxy', ->
         requestCount += 1
         {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.stream 'http://x.com/x'
+      netox = new Netox()
+      netox.stream 'http://x.com/x'
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 1
-        proxy.fetch 'http://x.com/x', {isIdempotent: true}
+        netox.fetch 'http://x.com/x', {isIdempotent: true}
       .then (res) ->
         b res?.y, 'z'
         b requestCount, 2
-        proxy.stream 'http://x.com/x'
+        netox.stream 'http://x.com/x'
         .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
@@ -204,7 +204,7 @@ describe 'Proxy', ->
         requestCount += 1
         {y: 'z', headers: req.headers}
     .withOverrides ->
-      proxy = new Proxy({
+      netox = new Netox({
         headers:
           'cookie': '1'
           'user-agent': '2'
@@ -212,7 +212,7 @@ describe 'Proxy', ->
           'x-forwarded-for': '4'
           'not-used': '5'
       })
-      proxy.stream 'http://x.com/x', {headers: {'user-x': 'y'}}
+      netox.stream 'http://x.com/x', {headers: {'user-x': 'y'}}
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
@@ -223,14 +223,14 @@ describe 'Proxy', ->
         b res.headers['x-forwarded-for'], '4'
         b res.headers['not-used'], undefined
         b requestCount, 1
-        proxy.stream 'http://x.com/x', {headers: {'user-x': 'y'}}
+        netox.stream 'http://x.com/x', {headers: {'user-x': 'y'}}
         .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
         b res.headers['user-x'], 'y'
         b res.headers['x-forwarded-for'], '4'
         b requestCount, 1
-        proxy.fetch 'http://x.com/x', {headers: {'user-x': 'y'}}
+        netox.fetch 'http://x.com/x', {headers: {'user-x': 'y'}}
       .then (res) ->
         b res?.y, 'z'
         b res.headers['user-x'], 'y'
@@ -243,15 +243,15 @@ describe 'Proxy', ->
       .get '/x'
       .reply {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.stream 'http://x.com/x', {x: '1'}
+      netox = new Netox()
+      netox.stream 'http://x.com/x', {x: '1'}
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
-        proxy.getSerializationStream()
+        netox.getSerializationStream()
         .take(1).toPromise()
       .then (serialization) ->
-        b _.includes serialization, 'window[\'STREAM_PROXY\'] ='
+        b _.includes serialization, 'window[\'NETOX\'] ='
 
   it 'invalidates serialization cache when invalidating cache', ->
     zock
@@ -259,13 +259,13 @@ describe 'Proxy', ->
       .get '/x'
       .reply {y: 'z'}
     .withOverrides ->
-      proxy = new Proxy()
-      proxy.stream 'http://x.com/x', {x: '1'}
+      netox = new Netox()
+      netox.stream 'http://x.com/x', {x: '1'}
       .take(1).toPromise()
       .then ->
-        proxy.fetch 'http://x.com/x'
+        netox.fetch 'http://x.com/x'
       .then ->
-        proxy.getSerializationStream()
+        netox.getSerializationStream()
         .take(1).toPromise()
       .then (serialization) ->
         b _.includes serialization, '"cache":{}'
