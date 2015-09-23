@@ -269,3 +269,26 @@ describe 'Netox', ->
         .take(1).toPromise()
       .then (serialization) ->
         b _.includes serialization, '"cache":{}'
+
+  it 'emits timing events', ->
+    zock
+      .base 'http://x.com'
+      .get '/x'
+      .reply {y: 'z'}
+    .withOverrides ->
+      netox = new Netox()
+      timingPromise = new Promise (resolve, reject) ->
+        netox.onTiming ({url, elapsed}) ->
+          try
+            b url, 'http://x.com/x'
+            b elapsed >= 0 and elapsed < 5 # arbitrary bounds for test
+            resolve null
+          catch error
+            reject error
+
+      netox.stream 'http://x.com/x'
+      .take(1).toPromise()
+      .then (res) ->
+        b res?.y, 'z'
+
+      return timingPromise

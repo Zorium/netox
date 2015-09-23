@@ -20,4 +20,8 @@ netox.fetch 'http://x.com/x', {isIdempotent: true} # dont re-fetch streams
 netox.getSerializationStream()
 .map (serialization) ->
   # window['NETOX'] = {...};
+
+# send analytics events with timing info
+netox.onTiming ({url, elapsed}) ->
+  # hyperplane.emit 'timing', {fields: {url, value: elapsed}}
 ```

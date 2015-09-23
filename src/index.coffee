@@ -13,20 +13,11 @@ else
 SERIALIZATION_KEY = 'NETOX'
 SERIALIZATION_EXPIRE_TIME_MS = 1000 * 10 # 10 seconds
 
-deferredRequestStream = (url, opts, onresult) ->
-  cachedPromise = null
-  Rx.Observable.defer ->
-    unless cachedPromise
-      cachedPromise = request url, opts
-      .then (res) ->
-        onresult res
-        return res
-    return cachedPromise
-
 module.exports = class Netox
   constructor: ({@headers} = {}) ->
     @headers ?= {}
     @serializationCache = new Rx.BehaviorSubject {}
+    @timingListeners = []
 
     loadedSerialization = window?[SERIALIZATION_KEY]
     expires = loadedSerialization?.expires
@@ -52,7 +43,7 @@ module.exports = class Netox
       {stream, requestStreams, url, proxyOpts} = val
 
       cachedSubject = null
-      requestStreams.onNext deferredRequestStream url, proxyOpts, (res) =>
+      requestStreams.onNext @_deferredRequestStream url, proxyOpts, (res) =>
         nextCache = _.clone @serializationCache.getValue()
         nextCache[key] = res
         @serializationCache.onNext nextCache
@@ -70,6 +61,27 @@ module.exports = class Netox
         'x-forwarded-for'
       ]
     , opts
+
+  onTiming: (fn) =>
+    @timingListeners.push fn
+
+  _emitTiming: ({url, elapsed}) =>
+    _.map @timingListeners, (fn) ->
+      fn {url, elapsed}
+
+  _deferredRequestStream: (url, opts, onresult) =>
+    cachedPromise = null
+    Rx.Observable.defer =>
+      unless cachedPromise?
+        startTime = Date.now()
+        cachedPromise = request url, opts
+        .then (res) =>
+          endTime = Date.now()
+          elapsed = endTime - startTime
+          @_emitTiming {url, elapsed}
+          onresult res
+          return res
+      return cachedPromise
 
   getSerializationStream: =>
     @serializationCache
@@ -99,7 +111,7 @@ module.exports = class Netox
     proxyOpts = @_mergeHeaders opts
 
     requestStreams = new Rx.ReplaySubject(1)
-    requestStreams.onNext deferredRequestStream url, proxyOpts, (res) =>
+    requestStreams.onNext @_deferredRequestStream url, proxyOpts, (res) =>
       nextCache = _.clone @serializationCache.getValue()
       nextCache[cacheKey] = res
       @serializationCache.onNext nextCache
