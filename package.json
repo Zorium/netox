@@ -23,7 +23,8 @@
     "clay-request": "^0.4.3",
     "coffee-script": "^1.9.3",
     "lodash": "^3.10.0",
-    "rx-lite": "^2.5.2"
+    "rx-lite": "^2.5.2",
+    "url-parse": "^1.0.3"
   },
   "devDependencies": {
     "b-assert": "^0.1.2",

@@ -1,5 +1,6 @@
 _ = require 'lodash'
 Rx = require 'rx-lite'
+URL = require 'url-parse'
 request = require 'clay-request'
 
 Promise = if window?
@@ -66,8 +67,11 @@ module.exports = class Netox
     @timingListeners.push fn
 
   _emitTiming: ({url, elapsed}) =>
+    parsed = new URL(url)
+    parsed.set 'query', null
+    parsed.set 'hash', null
     _.map @timingListeners, (fn) ->
-      fn {url, elapsed}
+      fn {url: parsed.toString(), elapsed}
 
   _deferredRequestStream: (url, opts, onresult) =>
     cachedPromise = null
