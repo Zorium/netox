@@ -78,7 +78,8 @@ module.exports = class Netox
         .then (res) =>
           endTime = Date.now()
           elapsed = endTime - startTime
-          @_emitTiming {url, elapsed}
+          if opts?.isTimed
+            @_emitTiming {url, elapsed}
           onresult res
           return res
       return cachedPromise

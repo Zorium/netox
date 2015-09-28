@@ -22,6 +22,7 @@ netox.getSerializationStream()
   # window['NETOX'] = {...};
 
 # send analytics events with timing info
+netox.stream 'http://x.com/x', {isTimed: true}
 netox.onTiming ({url, elapsed}) ->
   # hyperplane.emit 'timing', {fields: {url, value: elapsed}}
 ```

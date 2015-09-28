@@ -286,7 +286,7 @@ describe 'Netox', ->
           catch error
             reject error
 
-      netox.stream 'http://x.com/x'
+      netox.stream 'http://x.com/x', {isTimed: true}
       .take(1).toPromise()
       .then (res) ->
         b res?.y, 'z'
