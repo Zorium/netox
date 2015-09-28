@@ -1,6 +1,6 @@
 {
   "name": "netox",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "request streaming and caching",
   "keywords": [
     "isomorphic",
