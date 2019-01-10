@@ -14,6 +14,13 @@ else
 SERIALIZATION_KEY = 'NETOX'
 SERIALIZATION_EXPIRE_TIME_MS = 1000 * 10 # 10 seconds
 
+safeStringify = (obj) ->
+  JSON.stringify obj
+    .replace /<\/script/ig, '<\\/script'
+    .replace /<!--/g, '<\\!--'
+    .replace /\u2028/g, '\\u2028'
+    .replace /\u2029/g, '\\u2029'
+
 module.exports = class Netox
   constructor: ({@headers} = {}) ->
     @headers ?= {}
@@ -96,7 +103,7 @@ module.exports = class Netox
         expires: Date.now() + SERIALIZATION_EXPIRE_TIME_MS
       }
 
-      "window['#{SERIALIZATION_KEY}'] = #{JSON.stringify(serialization)};"
+      "window['#{SERIALIZATION_KEY}'] = #{safeStringify(serialization)};"
 
   fetch: (url, opts = {}) =>
     proxyOpts = @_mergeHeaders opts
